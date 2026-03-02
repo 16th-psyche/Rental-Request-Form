@@ -4,7 +4,9 @@ A single-page web app for creating, previewing, and exporting professional equip
 
 ## Live Demo
 
-Open `index.html` directly in any modern browser.
+[https://16th-psyche.github.io/Rental-Request-Form/](https://16th-psyche.github.io/Rental-Request-Form/)
+
+Or open `index.html` directly in any modern browser.
 
 ## Features
 
