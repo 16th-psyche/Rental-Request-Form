@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Equipment Rental Request Builder</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --accent:       #ffc938;
+      --accent-hover: #e6b200;
+      --surface:      #FFFFFF;
+      --surface-2:    #F2F2F7;
+      --border:       rgba(60,60,67,.12);
+      --text-1:       #1C1C1E;
+      --text-2:       #3C3C43;
+      --text-3:       rgba(60,60,67,.45);
+      --danger:       #FF3B30;
+      --radius:       14px;
+      --radius-sm:    10px;
+    }
+
+    html, body { height: 100%; }
+
+    body {
+      font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+      font-size: 13px;
+      color: var(--text-1);
+      background: var(--surface-2);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ────────────────────────────────────────────
+       SITE HEADER
+    ──────────────────────────────────────────── */
+    .site-header {
+      height: 52px;
+      flex-shrink: 0;
+      background: rgba(255,255,255,.85);
+      backdrop-filter: saturate(180%) blur(20px);
+      -webkit-backdrop-filter: saturate(180%) blur(20px);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .site-header-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .site-header-logo img { height: 30px; width: auto; }
+    .site-header-logo span {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-1);
+      letter-spacing: -0.2px;
+    }
+
+    /* ────────────────────────────────────────────
+       APP LAYOUT
+    ──────────────────────────────────────────── */
+    .app-layout {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* ────────────────────────────────────────────
+       FORM SIDEBAR
+    ──────────────────────────────────────────── */
+    .sidebar {
+      width: 400px;
+      min-width: 360px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .btn-download {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 9px 18px;
+      background: var(--accent);
+      color: #1C1C1E;
+      border: none;
+      border-radius: 980px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .15s, transform .1s;
+    }
+    .btn-download:hover  { background: var(--accent-hover); }
+    .btn-download:active { transform: scale(.98); }
+    .btn-download svg { flex-shrink: 0; }
+
+    .sidebar-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0 0 40px;
+    }
+    .sidebar-body::-webkit-scrollbar { width: 4px; }
+    .sidebar-body::-webkit-scrollbar-thumb { background: rgba(60,60,67,.2); border-radius: 2px; }
+
+    /* ── Form sections ── */
+    .form-section {
+      padding: 18px 20px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .form-section:last-child { border-bottom: none; }
+    .form-section-title {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--accent);
+      margin-bottom: 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--accent-light);
+      padding: 4px 10px;
+      border-radius: 980px;
+    }
+    .form-section-title::before {
+      content: '';
+      display: inline-block;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--accent);
+      flex-shrink: 0;
+    }
+
+    .form-grid   { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
+    .form-grid.cols-1 { grid-template-columns: 1fr; }
+    .form-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+    .span-2 { grid-column: span 2; }
+
+    .form-field { display: flex; flex-direction: column; gap: 4px; }
+    .form-field label {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: var(--text-3);
+    }
+    .form-field[data-required] label::after {
+      content: ' *';
+      color: var(--danger);
+      font-weight: 700;
+    }
+    .form-field input.field-error,
+    .form-field textarea.field-error {
+      border-color: var(--danger) !important;
+      background: rgba(255,59,48,.07) !important;
+    }
+    .validation-msg {
+      display: none;
+      margin: 10px 20px 0;
+      padding: 9px 12px;
+      background: rgba(255,59,48,.09);
+      border: 1px solid rgba(255,59,48,.25);
+      border-radius: var(--radius-sm);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--danger);
+      text-align: center;
+    }
+    .validation-msg.visible { display: block; }
+    .form-field input,
+    .form-field textarea,
+    .form-field select {
+      padding: 8px 10px;
+      background: rgba(118,118,128,.10);
+      border: 1.5px solid transparent;
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-size: 13px;
+      color: var(--text-1);
+      outline: none;
+      transition: border-color .15s, background .15s;
+      resize: none;
+    }
+    .form-field input:focus,
+    .form-field textarea:focus,
+    .form-field select:focus {
+      background: rgba(255,201,56,.10);
+      border-color: var(--accent);
+    }
+    .form-field input::placeholder,
+    .form-field textarea::placeholder { color: var(--text-3); }
+    .form-field textarea { min-height: 72px; }
+
+    /* ── Equipment rows ── */
+    .eq-rows { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+
+    .eq-row {
+      display: grid;
+      grid-template-columns: 1fr 60px 1fr 28px;
+      gap: 6px;
+      align-items: start;
+    }
+    .eq-row-num {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 34px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-3);
+      flex-shrink: 0;
+    }
+    .eq-row input {
+      padding: 7px 9px;
+      background: rgba(118,118,128,.10);
+      border: 1.5px solid transparent;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 12px;
+      color: var(--text-1);
+      outline: none;
+      width: 100%;
+      transition: border-color .15s, background .15s;
+    }
+    .eq-row input:focus {
+      background: rgba(255,201,56,.10);
+      border-color: var(--accent);
+    }
+    .eq-row input::placeholder { color: var(--text-3); font-size: 11px; }
+    .btn-remove-row {
+      width: 28px;
+      height: 34px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: none;
+      border: none;
+      border-radius: 6px;
+      color: var(--danger);
+      cursor: pointer;
+      font-size: 16px;
+      line-height: 1;
+      opacity: .6;
+      transition: opacity .12s, background .12s;
+    }
+    .btn-remove-row:hover { opacity: 1; background: rgba(255,59,48,.08); }
+
+    .btn-add-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 12px;
+      background: rgba(255,201,56,.10);
+      color: #1C1C1E;
+      border: 1.5px dashed rgba(255,201,56,.6);
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .12s;
+      width: 100%;
+      justify-content: center;
+    }
+    .btn-add-row:hover { background: rgba(255,201,56,.20); }
+
+    /* ── Col headers for eq rows ── */
+    .eq-col-headers {
+      display: grid;
+      grid-template-columns: 1fr 60px 1fr 28px;
+      gap: 6px;
+      margin-bottom: 4px;
+      padding: 0 0 2px;
+    }
+    .eq-col-headers span {
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: var(--text-3);
+      padding-left: 2px;
+    }
+
+    /* ────────────────────────────────────────────
+       PREVIEW PANEL
+    ──────────────────────────────────────────── */
+    .preview-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: #E5E5EA;
+    }
+
+    .preview-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 20px;
+      background: rgba(255,255,255,.75);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--text-2);
+    }
+    .preview-toolbar strong { font-weight: 600; }
+    .zoom-controls { display: flex; align-items: center; gap: 4px; margin-left: auto; }
+    .zoom-btn {
+      width: 28px; height: 28px;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(118,118,128,.12);
+      border: none; border-radius: 7px;
+      font-size: 15px; font-weight: 500;
+      color: var(--text-1);
+      cursor: pointer;
+      transition: background .12s;
+    }
+    .zoom-btn:hover { background: rgba(118,118,128,.22); }
+    .zoom-label { font-size: 12px; font-weight: 600; min-width: 38px; text-align: center; color: var(--text-2); }
+
+    .preview-scroll {
+      flex: 1;
+      overflow: auto;
+      padding: 32px 24px 48px;
+      display: flex;
+      justify-content: center;
+    }
+    .preview-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+    .preview-scroll::-webkit-scrollbar-thumb { background: rgba(60,60,67,.25); border-radius: 3px; }
+
+    .preview-scale-wrap {
+      transform-origin: top center;
+      transition: transform .2s;
+    }
+
+    /* ────────────────────────────────────────────
+       DOCUMENT (preview + PDF target)
+    ──────────────────────────────────────────── */
+    #preview-doc {
+      width: 794px;
+      min-height: 1122px;
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 6px 40px rgba(0,0,0,.16);
+      overflow: hidden;
+      font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+      font-size: 13px;
+      color: #1C1C1E;
+    }
+
+    #preview-doc .d-accent { height: 5px; background: #ffc938; }
+
+    #preview-doc .d-header {
+      padding: 22px 40px 18px;
+      border-bottom: 1px solid #E5E5EA;
+    }
+    #preview-doc .d-company-name {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: #ffc938;
+      margin-bottom: 6px;
+    }
+    #preview-doc .d-header h1 {
+      font-size: 19px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      color: #1C1C1E;
+    }
+    #preview-doc .d-meta-row {
+      margin-top: 5px;
+      font-size: 11px;
+      color: #8E8E93;
+      display: flex;
+      gap: 20px;
+    }
+    #preview-doc .d-meta-row span b { color: #3C3C43; font-weight: 600; }
+
+    #preview-doc .d-section {
+      padding: 0 0 20px;
+    }
+    #preview-doc .d-section-title {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.9px;
+      color: #a07800;
+      margin-bottom: 16px;
+      margin-left: 40px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      background: rgba(255, 201, 56, 0.18);
+      border-radius: 980px;
+    }
+    #preview-doc .d-section-title::before {
+      content: '';
+      display: inline-block;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #ffc938;
+      flex-shrink: 0;
+    }
+
+    #preview-doc .d-section-body { padding: 0 40px 20px; }
+    #preview-doc .d-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 32px; }
+    #preview-doc .d-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px 24px; }
+    #preview-doc .d-field { display: flex; flex-direction: column; gap: 2px; }
+    #preview-doc .d-field .lbl {
+      font-size: 9.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #8E8E93;
+    }
+    #preview-doc .d-field .val {
+      font-size: 12.5px;
+      color: #1C1C1E;
+      border-bottom: 1px solid #D1D1D6;
+      padding-bottom: 3px;
+      min-height: 20px;
+    }
+    #preview-doc .d-field .val.empty { color: #C7C7CC; font-style: italic; }
+
+    /* equipment table */
+    #preview-doc .eq-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 2px;
+    }
+    #preview-doc .eq-table thead tr { background: #1C1C1E; color: #fff; }
+    #preview-doc .eq-table thead th {
+      padding: 9px 12px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+      text-align: left;
+    }
+    #preview-doc .eq-table thead th:first-child { border-radius: 6px 0 0 0; width: 48px; text-align: center; }
+    #preview-doc .eq-table thead th:last-child  { border-radius: 0 6px 0 0; }
+    #preview-doc .eq-table tbody tr { border-bottom: 1px solid #E5E5EA; }
+    #preview-doc .eq-table tbody tr:nth-child(even) { background: #F9F9FB; }
+    #preview-doc .eq-table tbody tr:last-child { border-bottom: none; }
+    #preview-doc .eq-table td {
+      padding: 8px 12px;
+      font-size: 12.5px;
+      color: #1C1C1E;
+      min-height: 34px;
+    }
+    #preview-doc .eq-table td.sl { text-align: center; color: #8E8E93; font-weight: 700; font-size: 11px; }
+    #preview-doc .eq-table td.qty { text-align: center; }
+    #preview-doc .eq-table td.empty-cell { color: #C7C7CC; font-style: italic; font-size: 11px; }
+
+    /* notes */
+    #preview-doc .d-notes {
+      border: 1.5px dashed #C7C7CC;
+      border-radius: 8px;
+      padding: 12px 14px;
+      min-height: 56px;
+      font-size: 12px;
+      color: #1C1C1E;
+      line-height: 1.5;
+      white-space: pre-wrap;
+    }
+    #preview-doc .d-notes.empty { color: #C7C7CC; font-style: italic; }
+
+    /* signatures */
+    #preview-doc .d-sig-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+    #preview-doc .d-sig-label {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.5px; color: #8E8E93; margin-bottom: 44px;
+    }
+    #preview-doc .d-sig-line { border-bottom: 1.5px solid #1C1C1E; margin-bottom: 5px; }
+    #preview-doc .d-sig-sub {
+      display: grid; grid-template-columns: 1fr auto; gap: 12px;
+      font-size: 10px; color: #8E8E93;
+    }
+
+    /* footer */
+    #preview-doc .d-footer {
+      background: #F9F9FB;
+      padding: 12px 40px;
+      text-align: center;
+      font-size: 9.5px;
+      color: #8E8E93;
+      letter-spacing: 0.2px;
+    }
+
+    /* ── PDF / print ── */
+    @media print {
+      .site-header, .sidebar, .preview-toolbar { display: none !important; }
+      body { display: block; background: #fff; overflow: visible; }
+      .preview-panel { overflow: visible; background: #fff; }
+      .preview-scroll { padding: 0; overflow: visible; }
+      .preview-scale-wrap { transform: none !important; }
+      #preview-doc { box-shadow: none; border-radius: 0; min-height: auto; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════
+     SITE HEADER
+════════════════════════════════════════ -->
+<header class="site-header">
+  <div class="site-header-logo">
+    <img src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyBpZD0iTGF5ZXJfMiIgZGF0YS1uYW1lPSJMYXllciAyIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMzI4LjU2IDI4NjIuOTYiPgogIDxkZWZzPgogICAgPHN0eWxlPgogICAgICAuY2xzLTEgewogICAgICAgIGZpbGw6ICNmZmM5Mzg7CiAgICAgIH0KICAgIDwvc3R5bGU+CiAgPC9kZWZzPgogIDxnIGlkPSJMYXllcl84IiBkYXRhLW5hbWU9IkxheWVyIDgiPgogICAgPGc+CiAgICAgIDxnPgogICAgICAgIDxwYXRoIGQ9Ik0yNTYyLjc1LDExNjEuNTNjMC00ODcuNzUtMzk1LjQtODgzLjE2LTg4My4xNS04ODMuMTZzLTg4My4xNSwzOTUuNC04ODMuMTUsODgzLjE2YzAsNDYuMTUsMy41NSw5MS40NiwxMC4zNywxMzUuNywyMS41OS0xOS44Niw0Ny43My0zNC44NCw3Ni42OC00My4yLTMuNzktMjkuMDctNS43Ni01OC43MS01Ljc2LTg4LjgxLDAtMzc1LjUxLDMwNC40MS02NzkuOTIsNjc5LjkyLTY3OS45MnM2NzkuOTIsMzA0LjQxLDY3OS45Miw2NzkuOTJjMCwxMzIuNjEtMzcuOTcsMjU2LjM0LTEwMy42MSwzNjAuOTRsLTU3LjE5LTU1LjQ2LTE4NS4yMSwxOTEsNTkuNzcsNTcuOTZjLTExMS4wOSw3OS4wMi0yNDYuOTUsMTI1LjQ5LTM5My42NiwxMjUuNDktMjA4LjkzLDAtMzk1Ljg0LTk0LjIzLTUyMC41Ni0yNDIuNTItMjkuMTgsMTcuODgtNjMuNSwyOC4xOS0xMDAuMjQsMjguMTktMS44NywwLTMuNzMtLjAzLTUuNTktLjA5LDE1Ni4yNCwyNDguNjYsNDMyLjk4LDQxMy45NSw3NDguMzMsNDEzLjk1LDE3Mi4wNiwwLDMzMi42Mi00OS4yMSw0NjguMzktMTM0LjMxbDEzMS4zNywxMjcuNCwxODUuMjEtMTkxLTExNC4yMS0xMTAuNzZjMTMyLjM5LTE1NC40NCwyMTIuMzktMzU1LjEyLDIxMi4zOS01NzQuNDlaIi8+CiAgICAgICAgPGc+CiAgICAgICAgICA8cGF0aCBjbGFzcz0iY2xzLTEiIGQ9Ik05ODguNTgsMTk1NS45OWMtMTE4Ljc3LTEzLjYtMTAyLjI2LTI1Mi42NC04MC4yOC00MDAuOTcsNi44NywxLjI0LDEzLjk0LDEuODksMjEuMTcsMS44OSw2NS4zLDAsMTE4LjI1LTUyLjk1LDExOC4yNS0xMTguMjVzLTUyLjk0LTExOC4yNS0xMTguMjUtMTE4LjI1LTExOC4yNSw1Mi45NS0xMTguMjUsMTE4LjI1YzAsMzguOTcsMTguODYsNzMuNTQsNDcuOTUsOTUuMDgtNjkuNiwxNzkuNjgtMjA0LjE2LDYwMy41NSw0NS42NSw2NjguNTksMTUyLjAzLDM5LjU4LDMxMy44My01MS4zNyw0NzEuNjUtMjExLjYyLTgwLjgyLTI5LjA4LTEzNS45Ny02Mi4yLTE2MC45My03OC43OS03NC4zNSwzNi4xNy0xNTAuMyw1Mi44NS0yMjYuOTYsNDQuMDdaIi8+CiAgICAgICAgICA8cGF0aCBjbGFzcz0iY2xzLTEiIGQ9Ik0yMzg3Ljg1LDBsLTMyNS4xOCwzMjUuMTgsMTY3LjUxLTI0LjY0cy0zODMuODYsMTExMy40OS04NjkuMDIsMTUxNS4zMWM1NS43MywxNi4yOCwxMDYuNTUsMjMuNjQsMTQ1LjQ0LDI2LjgxLDQzNy40Mi01NDkuMSw4MTIuMjctMTUxNy40OSw4MTIuMjctMTUxNy40OWwxMDguNCwxMzMuMDNMMjM4Ny44NSwwWiIvPgogICAgICAgIDwvZz4KICAgICAgPC9nPgogICAgICA8Zz4KICAgICAgICA8cGF0aCBkPSJNODcuMDMsMjc0OC4yNmMtMjcuOTEtMTYuNjEtNDkuMzktNDAuMy02NC40NC03MS4wNS0xNS4wNi0zMC43NS0yMi41OC02Ny4xNS0yMi41OC0xMDkuMnYtLjU1YzAtNDIuMDQsNy41Ny03OC4zOSwyMi43Mi0xMDkuMDYsMTUuMTUtMzAuNjYsMzYuNjctNTQuMyw2NC41OC03MC45MiwyNy45MS0xNi42MSw2MC45NS0yNC45Miw5OS4xNC0yNC45MnM3MC45Niw4LjM2LDk4Ljg3LDI1LjA2YzI3LjkxLDE2LjcxLDQ5LjM5LDQwLjM1LDY0LjQ0LDcwLjkyLDE1LjA1LDMwLjU3LDIyLjU4LDY2Ljg4LDIyLjU4LDEwOC45MnYuNTVjMCw0Mi4wNS03LjUzLDc4LjQtMjIuNTgsMTA5LjA2LTE1LjA2LDMwLjY2LTM2LjQ5LDU0LjM1LTY0LjMxLDcxLjA1LTI3LjgxLDE2LjcxLTYwLjgyLDI1LjA2LTk5LDI1LjA2cy03MS41MS04LjMtOTkuNDItMjQuOTJaTTI1MS44NSwyNjk5LjkzYzE4LjI3LTEyLjMsMzIuMzYtMjkuNzQsNDIuMjctNTIuMzMsOS45MS0yMi41OCwxNC44Ny00OS4xMSwxNC44Ny03OS41OXYtLjU1YzAtMzAuNjYtNS01Ny4yMy0xNS4wMS03OS43My0xMC4wMS0yMi40OS0yNC4xOS0zOS44NC00Mi41NS01Mi4wNS0xOC4zNi0xMi4yMS00MC4wMy0xOC4zMS02NC45OS0xOC4zMXMtNDYuOTEsNi4wNi02NS4yNywxOC4xOGMtMTguMzYsMTIuMTItMzIuNTksMjkuNDItNDIuNjksNTEuOTEtMTAuMSwyMi40OS0xNS4xNSw0OS4xNi0xNS4xNSw4MHYuNTVjMCwzMC42Niw1LDU3LjI4LDE1LjAxLDc5Ljg3LDEwLDIyLjU4LDI0LjE5LDM5Ljk4LDQyLjU1LDUyLjE5LDE4LjM2LDEyLjIxLDQwLjIxLDE4LjMxLDY1LjU1LDE4LjMxczQ3LjE0LTYuMTUsNjUuNDEtMTguNDVaTTE3Mi42NywyNjQ0LjU3aDY0LjE3bDExOC40MiwxNjQuMTRoLTY0LjQ0bC0xMTguMTUtMTY0LjE0WiIvPgogICAgICAgIDxwYXRoIGQ9Ik00NTcuMzEsMjc1OS4yN2MtMTQuOTctOC43Mi0yNi40LTIxLjE2LTM0LjI5LTM3LjMyLTcuOS0xNi4xNS0xMS44NC0zNS4zNC0xMS44NC01Ny41NnYtMTg3LjU1aDYwLjA0djE3Ni4yNWMwLDIxLjg1LDUuMDksMzguNiwxNS4yOCw1MC4yNiwxMC4xOSwxMS42NiwyNS41NywxNy40OSw0Ni4xMywxNy40OSwxMy45NSwwLDI2LjEyLTMuMTIsMzYuNDktOS4zNiwxMC4zNy02LjI0LDE4LjM2LTE1LjAxLDIzLjk2LTI2LjMsNS42LTExLjI5LDguNC0yNC4zNyw4LjQtMzkuMjR2LTE2OS4wOWg1OS43NnYyODkuNzJoLTU5Ljc2di00My41MWgtMS4zOGMtNy41MywxNC42OS0xOC42OCwyNi41OC0zMy40NiwzNS42Ni0xNC43OCw5LjA5LTMzLjE4LDEzLjYzLTU1LjIyLDEzLjYzcy0zOS4xNS00LjM2LTU0LjEyLTEzLjA4WiIvPgogICAgICAgIDxwYXRoIGQ9Ik03NDMuMzIsMjc2MC43OWMtMTQuNTEtNy4zNC0yNS44LTE3LjYyLTMzLjg3LTMwLjg0LTguMDgtMTMuMjItMTIuMTItMjguNDYtMTIuMTItNDUuNzJ2LS41NWMwLTI1LjM0LDkuNDEtNDUuMzksMjguMjMtNjAuMTcsMTguODItMTQuNzgsNDUuMy0yMy4xOCw3OS40NS0yNS4ybDEwOS42MS02LjYxdjQxLjg2bC0xMDEuNjIsNi4zM2MtMTcuODEsMS4xLTMxLjUzLDUuMzctNDEuMTcsMTIuODEtOS42NCw3LjQ0LTE0LjQ2LDE3LjMxLTE0LjQ2LDI5LjZ2LjU1YzAsMTIuNjcsNC44MiwyMi42OCwxNC40NiwzMC4wMiw5LjY0LDcuMzUsMjIuNDUsMTEuMDIsMzguNDIsMTEuMDIsMTMuOTUsMCwyNi40OC0yLjg0LDM3LjU5LTguNTQsMTEuMTEtNS42OSwxOS44Ny0xMy41NCwyNi4zLTIzLjU1LDYuNDItMTAsOS42NC0yMS4yNSw5LjY0LTMzLjc0di04Ni4yYzAtMTUuOTctNC45Ni0yOC41LTE0Ljg3LTM3LjU5LTkuOTEtOS4wOS0yNC4xNS0xMy42My00Mi42OS0xMy42My0xNy4wOCwwLTMwLjgsMy42Ny00MS4xNywxMS4wMi0xMC4zOCw3LjM0LTE2Ljg1LDE2LjgtMTkuNDIsMjguMzdsLS41NSwyLjQ4aC01Ni4xOGwuMjgtMy4wM2MxLjQ3LTE2LjcsNy4wNy0zMS43MSwxNi44LTQ1LjAzLDkuNzMtMTMuMzEsMjMuMjItMjMuODIsNDAuNDgtMzEuNTMsMTcuMjYtNy43MSwzNy43My0xMS41Nyw2MS40MS0xMS41N3M0NC4xNSwzLjk1LDYxLjQxLDExLjg0YzE3LjI1LDcuOSwzMC42NiwxOSw0MC4yMSwzMy4zMiw5LjU0LDE0LjMyLDE0LjMyLDMxLjEyLDE0LjMyLDUwLjR2MTk5LjY2aC02MC4wNHYtNDUuNzJoLTEuMWMtNS42OSwxMC40Ni0xMy4wNCwxOS41MS0yMi4wMywyNy4xMy05LDcuNjItMTkuMTQsMTMuNDktMzAuNDMsMTcuNjItMTEuMjksNC4xMy0yMy4zNyw2LjItMzYuMjEsNi4yLTE5LjI4LDAtMzYuMTctMy42Ny01MC42Ny0xMS4wMloiLz4KICAgICAgICA8cGF0aCBkPSJNOTg5LjgxLDI0NzYuODVoNjAuMDR2NDMuNzloMS4xYzcuNzEtMTQuNjksMTktMjYuNTgsMzMuODctMzUuNjYsMTQuODctOS4wOSwzMy4yMy0xMy42Myw1NS4wOC0xMy42MywzMS43NiwwLDU2LjM2LDkuNiw3My44MSwyOC43OCwxNy40NCwxOS4xOSwyNi4xNiw0NS40OSwyNi4xNiw3OC45djE4Ny41NGgtNTkuNzZ2LTE3NS45OGMwLTIxLjg1LTUuMDktMzguNjUtMTUuMjgtNTAuNC0xMC4xOS0xMS43NS0yNS41Ny0xNy42My00Ni4xMy0xNy42My0xMy45NiwwLTI2LjEyLDMuMTItMzYuNDksOS4zNi0xMC4zOCw2LjI0LTE4LjM2LDE0Ljk3LTIzLjk2LDI2LjE2LTUuNiwxMS4yLTguNCwyNC40Mi04LjQsMzkuNjZ2MTY4LjgyaC02MC4wNHYtMjg5LjcyWiIvPgogICAgICAgIDxwYXRoIGQ9Ik0xMzI0LjAyLDI3NTIuOTRjLTE0LjA1LTEyLjk0LTIxLjA3LTMzLjkyLTIxLjA3LTYyLjkzdi0xNjUuNzloLTQxLjU5di00Ny4zN2g0MS41OXYtNzUuNDZoNjEuMTR2NzUuNDZoNTQuMjV2NDcuMzdoLTU0LjI1djE2Mi40OGMwLDE0LjY5LDMuMjEsMjQuNzQsOS42NCwzMC4xNiw2LjQyLDUuNDIsMTUuOTcsOC4xMiwyOC42NCw4LjEyLDMuMTIsMCw2LjAxLS4xNCw4LjY4LS40MSwyLjY2LS4yOCw1LjA5LS41LDcuMy0uNjl2NDUuOTljLTMuNDkuNTUtNy45LDEuMS0xMy4yMiwxLjY1LTUuMzMuNTUtMTEuMDIuODMtMTcuMDguODMtMjguNjQsMC00OS45OC02LjQ3LTY0LjAzLTE5LjQyWiIvPgogICAgICAgIDxwYXRoIGQ9Ik0xNTAwLjU2LDI3NTkuMjdjLTE0Ljk3LTguNzItMjYuNC0yMS4xNi0zNC4yOS0zNy4zMi03LjktMTYuMTUtMTEuODQtMzUuMzQtMTEuODQtNTcuNTZ2LTE4Ny41NWg2MC4wNHYxNzYuMjVjMCwyMS44NSw1LjA5LDM4LjYsMTUuMjgsNTAuMjYsMTAuMTksMTEuNjYsMjUuNTcsMTcuNDksNDYuMTMsMTcuNDksMTMuOTUsMCwyNi4xMi0zLjEyLDM2LjQ5LTkuMzYsMTAuMzctNi4yNCwxOC4zNi0xNS4wMSwyMy45Ni0yNi4zLDUuNi0xMS4yOSw4LjQtMjQuMzcsOC40LTM5LjI0di0xNjkuMDloNTkuNzZ2Mjg5LjcyaC01OS43NnYtNDMuNTFoLTEuMzhjLTcuNTMsMTQuNjktMTguNjgsMjYuNTgtMzMuNDYsMzUuNjYtMTQuNzgsOS4wOS0zMy4xOCwxMy42My01NS4yMiwxMy42M3MtMzkuMTUtNC4zNi01NC4xMi0xMy4wOFoiLz4KICAgICAgICA8cGF0aCBkPSJNMTc1MS44NywyNDc2Ljg1aDYwLjA0djQ0Ljg5aDEuMWM2LjI0LTE1LjI0LDE2LjQzLTI3LjQ0LDMwLjU3LTM2LjYzLDE0LjE0LTkuMTgsMzAuNjYtMTMuNzcsNDkuNTctMTMuNzcsMTMuMjIsMCwyNS4yLDIuMiwzNS45NCw2LjYxLDEwLjc0LDQuNDEsMTkuOTYsMTAuODgsMjcuNjgsMTkuNDIsNy43MSw4LjU0LDEzLjQsMTguODYsMTcuMDcsMzAuOThoMS4zOGM0Ljk2LTExLjc1LDExLjg4LTIxLjg5LDIwLjc5LTMwLjQzLDguOS04LjU0LDE5LjI4LTE1LjEsMzEuMTItMTkuNjksMTEuODQtNC41OSwyNC42NS02Ljg4LDM4LjQyLTYuODgsMTkuMDksMCwzNS43MSwzLjk5LDQ5Ljg1LDExLjk4LDE0LjE0LDcuOTksMjUuMTUsMTkuMTQsMzMuMDUsMzMuNDYsNy44OSwxNC4zMiwxMS44NCwzMS4xMiwxMS44NCw1MC40djE5OS4zOWgtNjAuMDR2LTE4NC43OWMwLTE4LjczLTQuNzgtMzMuMjgtMTQuMzItNDMuNjUtOS41NS0xMC4zNy0yMy4yMy0xNS41Ni00MS4wMy0xNS41Ni0xMS43NSwwLTIyLjA4LDIuNjYtMzAuOTgsNy45OS04LjkxLDUuMzMtMTUuODgsMTIuNzYtMjAuOTMsMjIuMzEtNS4wNSw5LjU1LTcuNTcsMjAuMzgtNy41NywzMi41djE4MS4yMWgtNTguNjZ2LTE4OS4yYzAtMTYuODktNC45MS0zMC4yNS0xNC43My00MC4wNy05LjgyLTkuODItMjMuMTgtMTQuNzMtNDAuMDctMTQuNzMtMTEuNTcsMC0yMS44OSwyLjgtMzAuOTgsOC40LTkuMDksNS42LTE2LjIxLDEzLjI3LTIxLjM0LDIzLTUuMTQsOS43My03LjcxLDIwLjkzLTcuNzEsMzMuNnYxNzkuMDFoLTYwLjA0di0yODkuNzJaIi8+CiAgICAgICAgPHBhdGggZD0iTTIyMTMuNDQsMjM2OS4xN2g2MS42OXYzNDMuOTdoMTg1LjM0djUzLjQzaC0yNDcuMDN2LTM5Ny40WiIvPgogICAgICAgIDxwYXRoIGQ9Ik0yNTM4LjU2LDI3NTQuMDRjLTIwLjQ3LTEyLjIxLTM2LjE3LTI5LjU2LTQ3LjA5LTUyLjA1LTEwLjkzLTIyLjQ5LTE2LjM5LTQ4Ljk3LTE2LjM5LTc5LjQ1di0uMjhjMC0zMC4xMSw1LjUxLTU2LjUsMTYuNTMtNzkuMTgsMTEuMDItMjIuNjcsMjYuNTMtNDAuMyw0Ni41NC01Mi44OCwyMC4wMS0xMi41Nyw0My41MS0xOC44Nyw3MC41LTE4Ljg3czUwLjU0LDYuMDIsNzAuMDksMTguMDRjMTkuNTUsMTIuMDMsMzQuNjUsMjkuMDEsNDUuMyw1MC45NSwxMC42NSwyMS45NCwxNS45Nyw0Ny40MiwxNS45Nyw3Ni40MnYyMC4xaC0yMzUuNDZ2LTQyLjE0aDIwNi41NWwtMjkuNDcsMzkuMzh2LTIzLjEzYzAtMjAuMzgtMy4wOC0zNy4zMi05LjIzLTUwLjgxLTYuMTUtMTMuNDktMTQuNjktMjMuNTUtMjUuNjEtMzAuMTYtMTAuOTMtNi42MS0yMy41NS05LjkxLTM3Ljg3LTkuOTFzLTI2LjgxLDMuNDktMzgsMTAuNDdjLTExLjIsNi45OC0yMC4wMSwxNy4yMS0yNi40NCwzMC43MS02LjQzLDEzLjUtOS42NCwzMC4wNy05LjY0LDQ5LjcxdjIzLjEzYzAsMTguNzMsMy4xNywzNC43NSw5LjUsNDguMDYsNi4zMywxMy4zMSwxNS4zOCwyMy41LDI3LjEzLDMwLjU3LDExLjc1LDcuMDcsMjUuNjEsMTAuNiw0MS41OCwxMC42LDExLjc1LDAsMjIuMTItMS43OSwzMS4xMi01LjM3LDguOTktMy41OCwxNi40OC04LjM1LDIyLjQ1LTE0LjMyLDUuOTYtNS45NiwxMC4xNC0xMi42MiwxMi41My0xOS45N2wuODMtMi4yaDU2LjczbC0uNTUsMy4wM2MtMi4zOSwxMS4zOS02Ljg5LDIyLjMxLTEzLjUsMzIuNzctNi42MSwxMC40Ni0xNS4xOSwxOS44OC0yNS43NSwyOC4yMy0xMC41Niw4LjM2LTIzLDE0LjkyLTM3LjMyLDE5LjY5LTE0LjMyLDQuNzctMzAuMjksNy4xNi00Ny45Miw3LjE2LTI4LjI4LDAtNTIuNjUtNi4xLTczLjEyLTE4LjMxWiIvPgogICAgICAgIDxwYXRoIGQ9Ik0yODA4Ljg3LDI3NjAuNzljLTE0LjUxLTcuMzQtMjUuOC0xNy42Mi0zMy44Ny0zMC44NC04LjA4LTEzLjIyLTEyLjEyLTI4LjQ2LTEyLjEyLTQ1Ljcydi0uNTVjMC0yNS4zNCw5LjQxLTQ1LjM5LDI4LjIzLTYwLjE3LDE4LjgyLTE0Ljc4LDQ1LjMtMjMuMTgsNzkuNDUtMjUuMmwxMDkuNjEtNi42MXY0MS44NmwtMTAxLjYyLDYuMzNjLTE3LjgxLDEuMS0zMS41Myw1LjM3LTQxLjE3LDEyLjgxLTkuNjQsNy40NC0xNC40NiwxNy4zMS0xNC40NiwyOS42di41NWMwLDEyLjY3LDQuODIsMjIuNjgsMTQuNDYsMzAuMDIsOS42NCw3LjM1LDIyLjQ1LDExLjAyLDM4LjQyLDExLjAyLDEzLjk1LDAsMjYuNDgtMi44NCwzNy41OS04LjU0LDExLjExLTUuNjksMTkuODctMTMuNTQsMjYuMy0yMy41NSw2LjQyLTEwLDkuNjQtMjEuMjUsOS42NC0zMy43NHYtODYuMmMwLTE1Ljk3LTQuOTYtMjguNS0xNC44Ny0zNy41OS05LjkyLTkuMDktMjQuMTUtMTMuNjMtNDIuNjktMTMuNjMtMTcuMDcsMC0zMC44LDMuNjctNDEuMTcsMTEuMDItMTAuMzgsNy4zNC0xNi44NSwxNi44LTE5LjQyLDI4LjM3bC0uNTUsMi40OGgtNTYuMThsLjI4LTMuMDNjMS40Ny0xNi43LDcuMDYtMzEuNzEsMTYuOC00NS4wMyw5LjczLTEzLjMxLDIzLjIyLTIzLjgyLDQwLjQ4LTMxLjUzLDE3LjI2LTcuNzEsMzcuNzMtMTEuNTcsNjEuNDEtMTEuNTdzNDQuMTUsMy45NSw2MS40MSwxMS44NGMxNy4yNSw3LjksMzAuNjYsMTksNDAuMjEsMzMuMzIsOS41NCwxNC4zMiwxNC4zMiwzMS4xMiwxNC4zMiw1MC40djE5OS42NmgtNjAuMDR2LTQ1LjcyaC0xLjFjLTUuNjksMTAuNDYtMTMuMDQsMTkuNTEtMjIuMDMsMjcuMTMtOSw3LjYyLTE5LjE0LDEzLjQ5LTMwLjQzLDE3LjYyLTExLjI5LDQuMTMtMjMuMzcsNi4yLTM2LjIxLDYuMi0xOS4yOCwwLTM2LjE3LTMuNjctNTAuNjctMTEuMDJaIi8+CiAgICAgICAgPHBhdGggZD0iTTMwNTUuMzcsMjQ3Ni44NWg2MC4wNHY0OS41N2gxLjM4YzUuNjktMTEuMzgsMTIuOTktMjEuMiwyMS44OS0yOS40Nyw4LjktOC4yNiwxOS4xNC0xNC42LDMwLjcxLTE5LDExLjU3LTQuNDEsMjQuMjMtNi42MSwzOC02LjYxLDI0LjYsMCw0NS45OSw2LjExLDY0LjE3LDE4LjMxLDE4LjE4LDEyLjIxLDMyLjIyLDI5LjU2LDQyLjE0LDUyLjA1LDkuOTEsMjIuNDksMTQuODcsNDkuMTYsMTQuODcsODB2LjI4YzAsMzAuODQtNSw1Ny40Ny0xNS4wMSw3OS44Ny0xMC4wMSwyMi40LTI0LjAxLDM5Ljc1LTQyLDUyLjA1LTE4LDEyLjMtMzkuMTEsMTguNDUtNjMuMzQsMTguNDUtMTMuNTksMC0yNi4zLTIuMi0zOC4xNC02LjYxLTExLjg0LTQuNDEtMjIuMjYtMTAuNjktMzEuMjYtMTguODYtOS04LjE3LTE2LjQzLTE3Ljg1LTIyLjMxLTI5LjA1aC0xLjF2MTQ1LjEzaC02MC4wNHYtMzg2LjExWk0zMjMyLjE3LDI3MDguODhjMTEuMzgtNy45OSwyMC4xLTE5LjQyLDI2LjE2LTM0LjI5czkuMDktMzIuNCw5LjA5LTUyLjZ2LS4yOGMwLTIwLjU2LTMuMDMtMzguMjgtOS4wOS01My4xNS02LjA2LTE0Ljg3LTE0Ljc4LTI2LjI1LTI2LjE2LTM0LjE1LTExLjM5LTcuODktMjQuODgtMTEuODQtNDAuNDgtMTEuODRzLTI4LjM3LDQuMDktMzkuOTMsMTIuMjZjLTExLjU3LDguMTctMjAuNjEsMTkuNjUtMjcuMTMsMzQuNDItNi41MiwxNC43OC05Ljc4LDMyLjI3LTkuNzgsNTIuNDZ2LjI4YzAsMjAuMDEsMy4zLDM3LjQxLDkuOTEsNTIuMTksNi42MSwxNC43OCwxNS42NSwyNi4yNiwyNy4xMywzNC40MiwxMS40Nyw4LjE3LDI0Ljc0LDEyLjI1LDM5Ljc5LDEyLjI1czI5LjEtMy45OSw0MC40OC0xMS45OFoiLz4KICAgICAgPC9nPgogICAgPC9nPgogIDwvZz4KPC9zdmc+" alt="Quantumleap Learning Solutions" />
+    <span>Rental Request Builder</span>
+  </div>
+  <button class="btn-download" onclick="downloadPDF()">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <path d="M8 1v9M8 10l-3-3M8 10l3-3" stroke="#1C1C1E" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M2 12h12" stroke="#1C1C1E" stroke-width="1.6" stroke-linecap="round"/>
+    </svg>
+    Download PDF
+  </button>
+</header>
+
+<!-- ═══════════════════════════════════════
+     APP LAYOUT
+════════════════════════════════════════ -->
+<div class="app-layout">
+
+<!-- ═══════════════════════════════════════
+     FORM SIDEBAR
+════════════════════════════════════════ -->
+<aside class="sidebar">
+  <div class="sidebar-body">
+    <div class="validation-msg" id="validation-msg">Please fill in all required fields marked with *</div>
+
+    <!-- Document Info -->
+    <div class="form-section">
+      <div class="form-section-title">Document Info</div>
+      <div class="form-grid cols-1">
+        <div class="form-field">
+          <label>Request Submission Date</label>
+          <input type="date" id="f-doc-date" oninput="updatePreview()" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Project & Contact -->
+    <div class="form-section">
+      <div class="form-section-title">Project &amp; Contact Details</div>
+      <div class="form-grid">
+        <div class="form-field" data-required>
+          <label>Project Name</label>
+          <input type="text" id="f-project" placeholder="Project name" oninput="updatePreview()" />
+        </div>
+        <div class="form-field" data-required>
+          <label>Requested By</label>
+          <input type="text" id="f-requester" placeholder="Full name" value="Saikiran M D" oninput="updatePreview()" />
+        </div>
+        <div class="form-field" data-required>
+          <label>Contact Number</label>
+          <input type="tel" id="f-phone" placeholder="+91 00000 00000" oninput="updatePreview()" />
+        </div>
+        <div class="form-field" data-required>
+          <label>Email</label>
+          <input type="email" id="f-email" placeholder="name@email.com" oninput="updatePreview()" />
+        </div>
+        <div class="form-field" data-required>
+          <label>Vendor / Rental House</label>
+          <input type="text" id="f-vendor" placeholder="Vendor name" value="CAMS SHADES" oninput="updatePreview()" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Rental Period -->
+    <div class="form-section">
+      <div class="form-section-title">Rental Period</div>
+      <div class="form-grid cols-3">
+        <div class="form-field" data-required>
+          <label>Delivery Date</label>
+          <input type="date" id="f-del-date" oninput="updatePreview()" />
+        </div>
+        <div class="form-field" data-required>
+          <label>Delivery Time</label>
+          <input type="time" id="f-del-time" oninput="updatePreview()" />
+        </div>
+        <div class="form-field" data-required>
+          <label>Delivery Location</label>
+          <input type="text" id="f-del-loc" placeholder="Address / set location" oninput="updatePreview()" />
+        </div>
+        <div class="form-field" data-required>
+          <label>Return Date</label>
+          <input type="date" id="f-ret-date" oninput="updatePreview()" />
+        </div>
+        <div class="form-field" data-required>
+          <label>Return Time</label>
+          <input type="time" id="f-ret-time" oninput="updatePreview()" />
+        </div>
+        <div class="form-field" data-required>
+          <label>Return Location</label>
+          <input type="text" id="f-ret-loc" placeholder="Address / vendor warehouse" oninput="updatePreview()" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Equipment List -->
+    <div class="form-section">
+      <div class="form-section-title">Equipment List</div>
+      <div class="eq-col-headers">
+        <span>Item / Equipment</span>
+        <span style="text-align:center">Qty</span>
+        <span>Remarks</span>
+        <span></span>
+      </div>
+      <div class="eq-rows" id="eq-rows"></div>
+      <button class="btn-add-row" onclick="addRow()">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M7 2v10M2 7h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        Add Row
+      </button>
+    </div>
+
+    <!-- Notes -->
+    <div class="form-section">
+      <div class="form-section-title">Notes / Special Instructions</div>
+      <div class="form-grid cols-1">
+        <div class="form-field">
+          <textarea id="f-notes" rows="4"
+            placeholder="Special handling requirements, insurance notes, additional instructions…"
+            oninput="updatePreview()"></textarea>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /sidebar-body -->
+</aside>
+
+
+<!-- ═══════════════════════════════════════
+     PREVIEW PANEL
+════════════════════════════════════════ -->
+<div class="preview-panel">
+  <div class="preview-toolbar">
+    <strong>Live Preview</strong>
+    <div class="zoom-controls">
+      <button class="zoom-btn" onclick="setZoom(-0.05)">−</button>
+      <span class="zoom-label" id="zoom-label">100%</span>
+      <button class="zoom-btn" onclick="setZoom(+0.05)">+</button>
+    </div>
+  </div>
+
+  <div class="preview-scroll" id="preview-scroll">
+    <div class="preview-scale-wrap" id="preview-scale-wrap">
+
+      <!-- ─── THE ACTUAL DOCUMENT ─── -->
+      <div id="preview-doc">
+        <div class="d-accent"></div>
+
+        <!-- Header -->
+        <div class="d-header">
+          <div class="d-company-name">Quantum Leap Learning Solutions</div>
+          <h1>Equipment Rental Request</h1>
+          <div class="d-meta-row">
+            <span><b>Request Submission Date:</b> <span id="d-doc-date">—</span></span>
+          </div>
+        </div>
+
+        <!-- Project & contact -->
+        <div class="d-section" style="margin-top: 12px;">
+          <div class="d-section-title">Project &amp; Contact Details</div>
+          <div class="d-section-body">
+            <div class="d-grid">
+              <div class="d-field"><div class="lbl">Project Name</div><div class="val empty" id="d-project">—</div></div>
+              <div class="d-field"><div class="lbl">Requested By</div><div class="val empty" id="d-requester">—</div></div>
+              <div class="d-field"><div class="lbl">Contact Number</div><div class="val empty" id="d-phone">—</div></div>
+              <div class="d-field"><div class="lbl">Email</div><div class="val empty" id="d-email">—</div></div>
+              <div class="d-field"><div class="lbl">Vendor / Rental House</div><div class="val empty" id="d-vendor">—</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Rental period -->
+        <div class="d-section">
+          <div class="d-section-title">Rental Period</div>
+          <div class="d-section-body">
+            <div class="d-grid-3">
+              <div class="d-field"><div class="lbl">Delivery Date</div><div class="val empty" id="d-del-date">—</div></div>
+              <div class="d-field"><div class="lbl">Delivery Time</div><div class="val empty" id="d-del-time">—</div></div>
+              <div class="d-field"><div class="lbl">Delivery Location</div><div class="val empty" id="d-del-loc">—</div></div>
+              <div class="d-field"><div class="lbl">Return Date</div><div class="val empty" id="d-ret-date">—</div></div>
+              <div class="d-field"><div class="lbl">Return Time</div><div class="val empty" id="d-ret-time">—</div></div>
+              <div class="d-field"><div class="lbl">Return Location</div><div class="val empty" id="d-ret-loc">—</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Equipment table -->
+        <div class="d-section">
+          <div class="d-section-title">Equipment List</div>
+          <div class="d-section-body">
+            <table class="eq-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Item / Equipment</th>
+                  <th style="width:80px;text-align:center;">Quantity</th>
+                  <th style="width:190px;">Remarks</th>
+                </tr>
+              </thead>
+              <tbody id="d-eq-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Notes -->
+        <div class="d-section">
+          <div class="d-section-title">Notes / Special Instructions</div>
+          <div class="d-section-body">
+            <div class="d-notes empty" id="d-notes">No notes added.</div>
+          </div>
+        </div>
+
+      </div>
+      <!-- /preview-doc -->
+
+    </div>
+  </div>
+</div><!-- /preview-panel -->
+
+</div><!-- /app-layout -->
+
+
+<script>
+  /* ─────────────────────────────────────────
+     STATE
+  ───────────────────────────────────────── */
+  let rows = [
+    { item: '', qty: '', remarks: '' },
+    { item: '', qty: '', remarks: '' },
+    { item: '', qty: '', remarks: '' },
+  ];
+  let zoomLevel = 1.0;
+
+  /* ─────────────────────────────────────────
+     HELPERS
+  ───────────────────────────────────────── */
+  function esc(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function fmtDate(val) {
+    if (!val) return null;
+    const [y, m, d] = val.split('-');
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return `${d} ${months[parseInt(m,10)-1]} ${y}`;
+  }
+
+  function fmtTime(val) {
+    if (!val) return null;
+    const [h, m] = val.split(':');
+    const hr = parseInt(h, 10);
+    const ampm = hr >= 12 ? 'PM' : 'AM';
+    const hr12 = hr % 12 || 12;
+    return `${hr12}:${m} ${ampm}`;
+  }
+
+  function setVal(id, text, fallback = '—') {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const hasVal = text && text.trim() !== '';
+    el.textContent = hasVal ? text : fallback;
+    el.classList.toggle('empty', !hasVal);
+  }
+
+  /* ─────────────────────────────────────────
+     UPDATE PREVIEW
+  ───────────────────────────────────────── */
+  function updatePreview() {
+    const get = id => document.getElementById(id)?.value ?? '';
+
+    // Doc meta
+    setVal('d-doc-date', fmtDate(get('f-doc-date')));
+
+    // Project & contact
+    setVal('d-project',   get('f-project'));
+    setVal('d-requester', get('f-requester'));
+    setVal('d-phone',     get('f-phone'));
+    setVal('d-email',     get('f-email'));
+    setVal('d-vendor',    get('f-vendor'));
+
+    // Rental period
+    setVal('d-del-date', fmtDate(get('f-del-date')));
+    setVal('d-del-time', fmtTime(get('f-del-time')));
+    setVal('d-del-loc',  get('f-del-loc'));
+    setVal('d-ret-date', fmtDate(get('f-ret-date')));
+    setVal('d-ret-time', fmtTime(get('f-ret-time')));
+    setVal('d-ret-loc',  get('f-ret-loc'));
+
+    // Equipment table
+    const tbody = document.getElementById('d-eq-tbody');
+    tbody.innerHTML = rows.map((r, i) => `
+      <tr>
+        <td class="sl">${i + 1}</td>
+        <td class="${r.item ? '' : 'empty-cell'}">${r.item ? esc(r.item) : '—'}</td>
+        <td class="qty ${r.qty ? '' : 'empty-cell'}">${r.qty ? esc(r.qty) : '—'}</td>
+        <td class="${r.remarks ? '' : 'empty-cell'}">${r.remarks ? esc(r.remarks) : ''}</td>
+      </tr>`).join('');
+
+    // Notes
+    const notesEl = document.getElementById('d-notes');
+    const notesVal = get('f-notes');
+    notesEl.textContent = notesVal || 'No notes added.';
+    notesEl.classList.toggle('empty', !notesVal.trim());
+  }
+
+  /* ─────────────────────────────────────────
+     EQUIPMENT ROWS
+  ───────────────────────────────────────── */
+  function renderRows() {
+    const container = document.getElementById('eq-rows');
+    container.innerHTML = rows.map((r, i) => `
+      <div class="eq-row" id="eq-row-${i}">
+        <input type="text" value="${esc(r.item)}" placeholder="Camera body, lens…"
+          oninput="rows[${i}].item = this.value; updatePreview()" />
+        <input type="text" value="${esc(r.qty)}" placeholder="1"
+          oninput="rows[${i}].qty = this.value; updatePreview()"
+          style="text-align:center" />
+        <input type="text" value="${esc(r.remarks)}" placeholder="Serial no., notes…"
+          oninput="rows[${i}].remarks = this.value; updatePreview()" />
+        <button class="btn-remove-row" onclick="removeRow(${i})" title="Remove row">×</button>
+      </div>`).join('');
+  }
+
+  function addRow() {
+    rows.push({ item: '', qty: '', remarks: '' });
+    renderRows();
+    updatePreview();
+    // Focus the new row's item input
+    const newRow = document.getElementById(`eq-row-${rows.length - 1}`);
+    newRow?.querySelector('input')?.focus();
+  }
+
+  function removeRow(i) {
+    if (rows.length === 1) return; // keep at least one row
+    rows.splice(i, 1);
+    renderRows();
+    updatePreview();
+  }
+
+  /* ─────────────────────────────────────────
+     ZOOM
+  ───────────────────────────────────────── */
+  function applyZoom() {
+    document.getElementById('preview-scale-wrap').style.transform = `scale(${zoomLevel})`;
+    document.getElementById('zoom-label').textContent = Math.round(zoomLevel * 100) + '%';
+    // Adjust scroll container height to avoid clipping
+    const wrap = document.getElementById('preview-scale-wrap');
+    const doc  = document.getElementById('preview-doc');
+    wrap.style.marginBottom = ((doc.offsetHeight * zoomLevel) - doc.offsetHeight) + 'px';
+  }
+
+  function setZoom(delta) {
+    zoomLevel = Math.min(1.2, Math.max(0.4, zoomLevel + delta));
+    applyZoom();
+  }
+
+  /* ─────────────────────────────────────────
+     PDF DOWNLOAD
+  ───────────────────────────────────────── */
+  function downloadPDF() {
+    // Validate required fields
+    const requiredInputs = document.querySelectorAll('[data-required] input, [data-required] textarea');
+    let hasError = false;
+    requiredInputs.forEach(input => {
+      if (!input.value.trim()) {
+        input.classList.add('field-error');
+        hasError = true;
+      } else {
+        input.classList.remove('field-error');
+      }
+    });
+    const msg = document.getElementById('validation-msg');
+    if (hasError) {
+      msg.classList.add('visible');
+      document.querySelector('.field-error')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    msg.classList.remove('visible');
+
+    const btn = document.querySelector('.btn-download');
+    btn.disabled = true;
+    btn.textContent = 'Generating…';
+
+    const el = document.getElementById('preview-doc');
+
+    // Temporarily snapshot current transform and reset for capture
+    const wrap = document.getElementById('preview-scale-wrap');
+    const prevTransform = wrap.style.transform;
+    wrap.style.transform = 'scale(1)';
+
+    const projectName = document.getElementById('f-project')?.value?.trim();
+    const filename = projectName
+      ? `rental-request-${projectName.toLowerCase().replace(/\s+/g, '-')}.pdf`
+      : 'equipment-rental-request.pdf';
+
+    html2pdf().set({
+      margin: 0,
+      filename,
+      image:      { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+      jsPDF:      { unit: 'px', format: [794, 1122], orientation: 'portrait', hotfixes: ['px_scaling'] }
+    })
+    .from(el)
+    .save()
+    .then(() => {
+      wrap.style.transform = prevTransform;
+      btn.disabled = false;
+      btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M8 1v9M8 10l-3-3M8 10l3-3" stroke="#1C1C1E" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M2 12h12" stroke="#1C1C1E" stroke-width="1.6" stroke-linecap="round"/></svg>
+        Download PDF`;
+    });
+  }
+
+  /* ─────────────────────────────────────────
+     INIT
+  ───────────────────────────────────────── */
+  // Set today's date as default doc date
+  const today = new Date().toISOString().slice(0, 10);
+  document.getElementById('f-doc-date').value = today;
+
+  // Clear error state when user edits a required field
+  document.querySelectorAll('[data-required] input, [data-required] textarea').forEach(input => {
+    input.addEventListener('input', () => {
+      input.classList.remove('field-error');
+      if (!document.querySelector('.field-error')) {
+        document.getElementById('validation-msg').classList.remove('visible');
+      }
+    });
+  });
+
+  renderRows();
+  updatePreview();
+  applyZoom();
+</script>
+</body>
+</html>
