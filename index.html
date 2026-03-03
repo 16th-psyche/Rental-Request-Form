@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Equipment Rental Request Builder</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -504,6 +503,7 @@
     }
 
     /* ── PDF / print ── */
+    @page { size: A4 portrait; margin: 0; }
     @media print {
       .site-header, .sidebar, .preview-toolbar { display: none !important; }
       body { display: block; background: #fff; overflow: visible; }
@@ -905,37 +905,20 @@
 
     const btn = document.querySelector('.btn-download');
     btn.disabled = true;
-    btn.textContent = 'Generating…';
+    btn.textContent = 'Printing…';
 
-    const el = document.getElementById('preview-doc');
-
-    // Temporarily snapshot current transform and reset for capture
-    const wrap = document.getElementById('preview-scale-wrap');
-    const prevTransform = wrap.style.transform;
-    wrap.style.transform = 'scale(1)';
-
-    const projectName = document.getElementById('f-project')?.value?.trim();
-    const filename = projectName
-      ? `rental-request-${projectName.toLowerCase().replace(/\s+/g, '-')}.pdf`
-      : 'equipment-rental-request.pdf';
-
-    html2pdf().set({
-      margin: 0,
-      filename,
-      image:      { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
-      jsPDF:      { unit: 'px', format: [794, 1122], orientation: 'portrait', hotfixes: ['px_scaling'] }
-    })
-    .from(el)
-    .save()
-    .then(() => {
-      wrap.style.transform = prevTransform;
+    const resetBtn = () => {
       btn.disabled = false;
-      btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <path d="M8 1v9M8 10l-3-3M8 10l3-3" stroke="#1C1C1E" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M2 12h12" stroke="#1C1C1E" stroke-width="1.6" stroke-linecap="round"/></svg>
-        Download PDF`;
-    });
+      btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none">'
+        + '<path d="M8 1v9M8 10l-3-3M8 10l3-3" stroke="#1C1C1E" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>'
+        + '<path d="M2 12h12" stroke="#1C1C1E" stroke-width="1.6" stroke-linecap="round"/>'
+        + '</svg> Download PDF';
+    };
+
+    window.onafterprint = function () { window.onafterprint = null; resetBtn(); };
+    window.print();
+    // Fallback reset in case onafterprint doesn't fire
+    setTimeout(resetBtn, 1000);
   }
 
   /* ─────────────────────────────────────────
