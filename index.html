@@ -10,6 +10,7 @@
     :root {
       --accent:       #ffc938;
       --accent-hover: #e6b200;
+      --accent-light: rgba(255,201,56,0.1);
       --surface:      #FFFFFF;
       --surface-2:    #F2F2F7;
       --border:       rgba(60,60,67,.12);
@@ -197,7 +198,7 @@
     .form-field input:focus,
     .form-field textarea:focus,
     .form-field select:focus {
-      background: rgba(255,201,56,.10);
+      background: var(--accent-light);
       border-color: var(--accent);
     }
     .form-field input::placeholder,
@@ -237,7 +238,7 @@
       transition: border-color .15s, background .15s;
     }
     .eq-row input:focus {
-      background: rgba(255,201,56,.10);
+      background: var(--accent-light);
       border-color: var(--accent);
     }
     .eq-row input::placeholder { color: var(--text-3); font-size: 11px; }
@@ -264,8 +265,8 @@
       align-items: center;
       gap: 6px;
       padding: 8px 12px;
-      background: rgba(255,201,56,.10);
-      color: #1C1C1E;
+      background: var(--accent-light);
+      color: var(--text-1);
       border: 1.5px dashed rgba(255,201,56,.6);
       border-radius: var(--radius-sm);
       font-size: 12px;
